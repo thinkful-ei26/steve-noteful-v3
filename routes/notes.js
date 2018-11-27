@@ -1,50 +1,91 @@
-'use strict';
+'use strict'
 
-const express = require('express');
+const express = require('express')
+const mongoose = require('mongoose')
 
-const router = express.Router();
+const router = express.Router()
+
+const {MONGODB_URI} = require('../config')
+
+const Note = require('../models/note')
 
 /* ========== GET/READ ALL ITEMS ========== */
 router.get('/', (req, res, next) => {
-
-  console.log('Get All Notes');
-  res.json([
-    { id: 1, title: 'Temp 1' },
-    { id: 2, title: 'Temp 2' },
-    { id: 3, title: 'Temp 3' }
-  ]);
-
-});
+  const {searchTerm} = req.query
+  let filter = {}
+  if (searchTerm) {
+    filter.title = {$regex: searchTerm, $options: 'i'}
+  }
+  return Note.find(searchTerm)
+    .sort({updatedAt: 'desc'})
+    .then(results => {
+      res.json(results)
+    })
+    .catch(err => {
+      console.error(err)
+      console.error(`ERROR: ${err.message}`)
+    })
+})
 
 /* ========== GET/READ A SINGLE ITEM ========== */
 router.get('/:id', (req, res, next) => {
+  const id = req.params.id
 
-  console.log('Get a Note');
-  res.json({ id: 1, title: 'Temp 1' });
-
-});
+  if (mongoose.Types.ObjectId.isValid(id)) {
+    return Note.findById(id)
+      .then(results => {
+        res.json(results)
+      })
+      .catch(err => {
+        console.error(`ERROR: ${err.message}`)
+        console.error(err)
+      })
+  }
+})
 
 /* ========== POST/CREATE AN ITEM ========== */
 router.post('/', (req, res, next) => {
-
-  console.log('Create a Note');
-  res.location('path/to/new/document').status(201).json({ id: 2, title: 'Temp 2' });
-
-});
+  const title = req.body.title
+  const content = req.body.content
+  return Note.create({title, content})
+    .then(results => {
+      console.log(results)
+      res.json(results)
+    })
+    .catch(err => {
+      console.error(`ERROR: ${err.message}`)
+      console.error(err)
+    })
+})
 
 /* ========== PUT/UPDATE A SINGLE ITEM ========== */
 router.put('/:id', (req, res, next) => {
-
-  console.log('Update a Note');
-  res.json({ id: 1, title: 'Updated Temp 1' });
-
-});
+  const {title, content} = req.body
+  const update = {title, content}
+  const id = req.params.id
+  return Note.findByIdAndUpdate(id, update)
+    .then(results => {
+      console.log(results)
+      res.json(results)
+    })
+    .catch(err => {
+      console.error(`ERROR: ${err.message}`)
+      console.error(err)
+    })
+})
 
 /* ========== DELETE/REMOVE A SINGLE ITEM ========== */
 router.delete('/:id', (req, res, next) => {
+  const id = req.params.id
+  return Note.findByIdAndDelete(id)
+    .then(results => {
+      console.log(results)
+      res.status(204).end()
+    })
+    .catch(err => {
+      console.error(`ERROR: ${err.message}`)
+      console.error(err)
+    })
+})
 
-  console.log('Delete a Note');
-  res.status(204).end();
-});
-
-module.exports = router;
+module.exports = router
